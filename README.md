@@ -78,6 +78,15 @@ flowchart LR
     A <--> SQL[("Products DB<br/>Postgres, read-only role")]
     A <--> KB[("Knowledge base<br/>pgvector, 3072-dim embeddings")]
     A <--> M[("Chat memory<br/>one session per customer")]
+
+    classDef user fill:#1f6feb,stroke:#1f6feb,color:#ffffff
+    classDef channel fill:#30363d,stroke:#8b949e,color:#ffffff
+    classDef brain fill:#8250df,stroke:#8250df,color:#ffffff
+    classDef store fill:#1a7f37,stroke:#1a7f37,color:#ffffff
+    class C user
+    class T channel
+    class A brain
+    class SQL,KB,M store
 ```
 
 ### What runs in the background
@@ -93,6 +102,18 @@ flowchart LR
     subgraph MON["Monitoring (any failure)"]
         X["Any workflow fails"] --> F["Format alert"] --> TG["Telegram message<br/>to the owner"]
     end
+
+    classDef step fill:#30363d,stroke:#8b949e,color:#ffffff
+    classDef ai fill:#8250df,stroke:#8250df,color:#ffffff
+    classDef store fill:#1a7f37,stroke:#1a7f37,color:#ffffff
+    classDef out fill:#1f6feb,stroke:#1f6feb,color:#ffffff
+    class D,S,Q,B,X,F step
+    class E,L ai
+    class V store
+    class G,TG out
+    style ING fill:transparent,stroke:#8b949e
+    style INV fill:transparent,stroke:#8b949e
+    style MON fill:transparent,stroke:#8b949e
 ```
 
 ## The six workflows
@@ -143,6 +164,11 @@ Agent:     I am unable to perform the DELETE operation as I do not have
            the necessary permissions for that action.
 ```
 
+Two more layers sit around it:
+
+- The read-only role has a 5 second `statement_timeout`, so a hostile query like `pg_sleep` or a giant cross join cannot tie up the database.
+- Every webhook (agent, ingestion, inventory, test) requires a secret `X-Webhook-Key` header. Without it n8n answers `403 Forbidden` before any workflow runs, so nobody can burn the API quota or spam the owner. The Telegram trigger is verified by Telegram's own secret token.
+
 **2. The model never decides a number.**
 In the inventory workflow, SQL finds the products and a Code node sets the reorder quantities (20 units if out of stock, 10 if low). The LLM only turns that list into a polite email and is told to copy it exactly. Across 40 products and 540 units it changed nothing.
 
@@ -176,6 +202,7 @@ Problems found in testing, and the fixes:
 | Average reply time | **6-10 s** (down from ~52 s) |
 | Prices and stock | Always from the database, never invented |
 | Prompt injection against the SQL tool | Blocked by the database (`permission denied`) |
+| Webhook call without the secret key | `403 Forbidden`, workflow never starts |
 | Memory isolation between customers | Confirmed |
 | Restock email accuracy | 40 products, 540 units, 0 changes by the LLM |
 | Failure alert to owner | ~1 s on Telegram |
@@ -205,18 +232,20 @@ docker compose up -d        # n8n on http://localhost:5678
 | Google Gemini API | Chat model, embeddings | AI Studio key |
 | Gmail OAuth2 | Inventory draft | optional |
 | Telegram API | Channel, alerts | BotFather token |
+| Header Auth, named "Webhook Secret (X-Webhook-Key)" | Every webhook + the Telegram workflow's call to the agent | Name `X-Webhook-Key`, value: a long random string. Set "Allowed domains" to `localhost` |
 
 **4. Import the workflows.** In n8n: Create workflow > ... > Import from file, for each file in [`workflows/`](workflows). Pick your credentials on every node that shows a warning. In workflow 04, replace `YOUR_TELEGRAM_CHAT_ID` with your own ID (get it from [@userinfobot](https://t.me/userinfobot)).
 
 **5. Load the knowledge base.**
 ```bash
-curl -X POST http://localhost:5678/webhook/noorzaah-ingest
+curl -X POST http://localhost:5678/webhook/noorzaah-ingest -H "X-Webhook-Key: $WEBHOOK_SECRET"
 ```
 
 **6. Wire up the error alerts.** Open workflows 01, 02, 03 and 06 > Settings > Error workflow > "04 - Error Alert to Telegram". Publish all workflows, including 04.
 
 **7. Ask it something.**
 ```powershell
+$env:WEBHOOK_SECRET = "the-same-secret-as-in-n8n"
 .\tests\ask.ps1 -Message "Any velvet dresses under 15000?" -Session "customer_a"
 ```
 

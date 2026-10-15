@@ -1,0 +1,3 @@
+# Count workflow JSON and SQL in the language bar (both are ignored by default)
+*.json linguist-detectable=true
+*.sql  linguist-detectable=true linguist-language=PLpgSQL

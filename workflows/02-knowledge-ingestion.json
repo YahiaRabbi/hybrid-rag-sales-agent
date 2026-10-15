@@ -13,10 +13,17 @@
         "httpMethod": "POST",
         "path": "noorzaah-ingest",
         "responseMode": "lastNode",
-        "options": {}
+        "options": {},
+        "authentication": "headerAuth"
       },
       "webhookId": "noorzaah-ingest",
-      "id": "i1"
+      "id": "i1",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "REPLACE_WITH_YOUR_CREDENTIAL",
+          "name": "Webhook Secret (X-Webhook-Key)"
+        }
+      }
     },
     {
       "name": "Clear Old Knowledge",

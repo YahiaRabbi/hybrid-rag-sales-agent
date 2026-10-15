@@ -42,6 +42,10 @@ create role noorzaah_bot login password 'CHANGE_ME_TO_A_LONG_RANDOM_PASSWORD';
 grant usage on schema public to noorzaah_bot;
 grant select on public.products to noorzaah_bot;
 
+-- Stop slow or hostile queries (for example pg_sleep, huge cross joins)
+-- from tying up the database.
+alter role noorzaah_bot set statement_timeout = '5s';
+
 alter table public.products enable row level security;
 create policy "bot can read products"
   on public.products for select

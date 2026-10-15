@@ -127,9 +127,17 @@
         -100
       ],
       "onError": "continueRegularOutput",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "REPLACE_WITH_YOUR_CREDENTIAL",
+          "name": "Webhook Secret (X-Webhook-Key)"
+        }
+      },
       "parameters": {
         "method": "POST",
         "url": "http://localhost:5678/webhook/sales-agent",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
         "sendBody": true,
         "specifyBody": "json",
         "jsonBody": "={{ JSON.stringify({ session_id: $('Normalize').item.json.session_id, message: $('Normalize').item.json.message }) }}",

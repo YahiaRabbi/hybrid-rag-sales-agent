@@ -14,8 +14,15 @@
       "parameters": {
         "httpMethod": "POST",
         "path": "sales-agent",
+        "authentication": "headerAuth",
         "responseMode": "responseNode",
         "options": {}
+      },
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "REPLACE_WITH_YOUR_CREDENTIAL",
+          "name": "Webhook Secret (X-Webhook-Key)"
+        }
       }
     },
     {

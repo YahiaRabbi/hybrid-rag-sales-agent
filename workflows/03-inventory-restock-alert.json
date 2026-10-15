@@ -34,8 +34,15 @@
       "parameters": {
         "httpMethod": "POST",
         "path": "inventory-run",
+        "authentication": "headerAuth",
         "responseMode": "lastNode",
         "options": {}
+      },
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "REPLACE_WITH_YOUR_CREDENTIAL",
+          "name": "Webhook Secret (X-Webhook-Key)"
+        }
       }
     },
     {
