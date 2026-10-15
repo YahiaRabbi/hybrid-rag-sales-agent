@@ -1,0 +1,90 @@
+{
+  "name": "04 - Error Alert to Telegram",
+  "nodes": [
+    {
+      "id": "e1",
+      "name": "When Any Workflow Fails",
+      "type": "n8n-nodes-base.errorTrigger",
+      "typeVersion": 1,
+      "position": [
+        0,
+        0
+      ],
+      "parameters": {}
+    },
+    {
+      "id": "e2",
+      "name": "Format Alert",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        240,
+        0
+      ],
+      "parameters": {
+        "jsCode": "// Error Trigger gives either {execution, workflow} or, when the trigger node itself failed, {trigger, workflow}\nconst d = $input.first().json;\nconst wf = d.workflow?.name || 'Unknown workflow';\nconst ex = d.execution || {};\nconst err = ex.error || d.trigger?.error || {};\nconst node = ex.lastNodeExecuted || err.node?.name || 'trigger';\nconst msg = String(err.message || 'No error message').replace(/\\s*\\[line \\d+\\]$/, '').slice(0, 300);\nconst time = $now.setZone('Asia/Dhaka').toFormat('dd LLL yyyy, h:mm a');\nconst lines = [\n  '\\u26a0\\ufe0f Noorzaah automation failed',\n  '',\n  `Workflow: ${wf}`,\n  `Failed at: ${node}`,\n  `Error: ${msg}`,\n  `Time: ${time}`,\n];\nif (ex.id) lines.push(`Execution: #${ex.id}`);\nif (ex.url) lines.push(ex.url);\nreturn [{ json: { text: lines.join('\\n') } }];"
+      }
+    },
+    {
+      "id": "e3",
+      "name": "Telegram Alert to Owner",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        480,
+        0
+      ],
+      "webhookId": "telegram-alert",
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 5000,
+      "parameters": {
+        "resource": "message",
+        "operation": "sendMessage",
+        "chatId": "YOUR_TELEGRAM_CHAT_ID",
+        "text": "={{ $json.text }}",
+        "additionalFields": {
+          "appendAttribution": false
+        }
+      },
+      "credentials": {
+        "telegramApi": {
+          "id": "REPLACE_WITH_YOUR_CREDENTIAL",
+          "name": "Telegram Bot"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "When Any Workflow Fails": {
+      "main": [
+        [
+          {
+            "node": "Format Alert",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Alert": {
+      "main": [
+        [
+          {
+            "node": "Telegram Alert to Owner",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "timezone": "Asia/Dhaka"
+  },
+  "pinData": {},
+  "meta": {
+    "templateCredsSetupCompleted": false
+  }
+}

@@ -1,0 +1,55 @@
+{
+  "name": "05 - Error Alert Test",
+  "nodes": [
+    {
+      "id": "t1",
+      "name": "Trigger Test Error",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        0,
+        0
+      ],
+      "webhookId": "force-error",
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "force-error",
+        "options": {}
+      }
+    },
+    {
+      "id": "t2",
+      "name": "Simulate Failure",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        240,
+        0
+      ],
+      "parameters": {
+        "jsCode": "// Demo only: fails on purpose so the Error Alert workflow sends a Telegram message.\nthrow new Error('Simulated failure for alert demo (database timeout)');"
+      }
+    }
+  ],
+  "connections": {
+    "Trigger Test Error": {
+      "main": [
+        [
+          {
+            "node": "Simulate Failure",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "timezone": "Asia/Dhaka"
+  },
+  "pinData": {},
+  "meta": {
+    "templateCredsSetupCompleted": false
+  }
+}

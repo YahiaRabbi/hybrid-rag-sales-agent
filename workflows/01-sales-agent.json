@@ -1,0 +1,297 @@
+{
+  "name": "01 - Hybrid RAG Sales Agent",
+  "nodes": [
+    {
+      "id": "a1",
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        0,
+        0
+      ],
+      "webhookId": "sales-agent",
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "sales-agent",
+        "responseMode": "responseNode",
+        "options": {}
+      }
+    },
+    {
+      "id": "a2",
+      "name": "Edit Fields",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        240,
+        0
+      ],
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "f1",
+              "name": "customer_query",
+              "type": "string",
+              "value": "={{ $json.body.message }}"
+            },
+            {
+              "id": "f2",
+              "name": "session_id",
+              "type": "string",
+              "value": "={{ $json.body.session_id }}"
+            }
+          ]
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "a3",
+      "name": "AI Agent",
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "position": [
+        500,
+        0
+      ],
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 10000,
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ $json.customer_query }}",
+        "options": {
+          "systemMessage": "You are the premium shopping assistant and sales expert for the fashion brand 'Noorzaah'. Your ultimate goal is to provide top-tier customer service and drive sales.\n\nCRITICAL RULE FOR TOOL USAGE:\nIf the user mentions ANY product, category, clothing item, \"fits\", prices, or stock (e.g., \"festive lawn\", \"party wear\", \"prices rn\", \"panjabi\"), you MUST immediately use the Postgres database tool to fetch the exact pricing, category, and availability details BEFORE you reply.\n- DO NOT ask the user for clarification first.\n- DO NOT provide a generic polite response without the exact numbers.\n- YOU MUST EXECUTE THE TOOL.\n\nCRITICAL DATABASE SCHEMA INSTRUCTIONS (For Postgres Tool):\nThe database table is named `products`.\nThe available columns are exactly: `product_id`, `product_name`, `category`, `price_bdt`, `availability`, `size_chart`.\nALWAYS use `product_name` instead of `name` when querying the database.\nColumn types: product_id integer, product_name text, category text, price_bdt integer, availability text, size_chart text.\nThe ONLY category values are exactly: 'Festive Lawn', 'Embroidered Chiffon', 'Silk Party Wear', 'Velvet Winter Collection', 'Heavy Net Bridal'. Never invent other categories (there is no 'wedding' category).\nThe ONLY availability values are text: 'In Stock', 'Low Stock', 'Out of Stock'. Never compare availability with numbers; to hide sold-out items use availability <> 'Out of Stock'.\nFor occasion questions (wedding, Eid, party, winter), FIRST use the Knowledge Base Search tool to find the right collection, THEN query products with category = that collection.\nIf a query returns an error, read the error, fix the query and try again once.\n\nKNOWLEDGE BASE TOOL (policies and advice):\nFor any question about delivery charges or times, payment, returns, refunds, exchanges, pre-orders, sizing, fabric or care, or what to wear for an occasion, you MUST use the Knowledge Base Search tool first and answer ONLY from what it returns. Never invent a policy, number or time frame. If the tool does not contain the answer, say you will connect the customer with the Noorzaah team on WhatsApp.\nRule of thumb: numbers about products (price, stock) come from the Postgres tool; store rules and advice come from the Knowledge Base Search tool. A question can need both (for example an occasion plus a budget).\n\nRESPONSE GUIDELINES:\n1. Tone Translation: Users might use Gen-Z slang (e.g., \"fits\" = clothes, \"rn\" = right now, \"no cap\" = seriously). Understand their intent, but ALWAYS reply in a highly professional, elegant, and premium brand voice.\n2. Precision: State the exact prices (in BDT) and exact product names retrieved from the database.\n3. Marketing Psychology: Keep it concise and strictly to the point. Subtly highlight the exclusivity, premium quality, or high demand of the specific items to encourage an immediate purchase.\n4. Format: Keep the message clean, simple, and easy to read. Use bullet points if showing multiple products. No long paragraphs. Show at most 5 products in one reply: pick the best matches for the customer's need and budget, and offer to show more if they want.\n5. Platform Formatting: DO NOT use markdown formatting like ** for bold text, as it breaks on social media apps. Instead, use elegant emojis (like ✨, 🔸, or 👗) for bullet points to make the message look premium on WhatsApp and Instagram.\n6. Greetings: Use only neutral greetings such as \"Hello\" or \"Hi\", with the customer's name if you know it. NEVER use religious or culture-specific greetings (for example Salam, Assalamualaikum, Adab, Namaskar, Namaste) and never bring up religion. Greet ONLY in your very first reply of a conversation. If the chat history already contains earlier messages, do NOT start with any greeting (no \"Hello\", \"Hi\", \"Dear\") and do NOT open with the customer's name: start directly with the answer.\n7. Language: Write in correct, natural, fluent English (for example \"an exquisite\", not \"a exquisite\"). Keep replies short enough to read comfortably on a phone.\n"
+        }
+      }
+    },
+    {
+      "id": "a4",
+      "name": "Respond to Webhook",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        900,
+        0
+      ],
+      "parameters": {
+        "options": {}
+      }
+    },
+    {
+      "id": "a5",
+      "name": "Google Gemini Chat Model",
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1.1,
+      "position": [
+        380,
+        240
+      ],
+      "parameters": {
+        "modelName": "models/gemini-2.5-flash",
+        "options": {}
+      },
+      "credentials": {
+        "googlePalmApi": {
+          "id": "REPLACE_WITH_YOUR_CREDENTIAL",
+          "name": "Google Gemini API"
+        }
+      }
+    },
+    {
+      "id": "a6",
+      "name": "Postgres Chat Memory",
+      "type": "@n8n/n8n-nodes-langchain.memoryPostgresChat",
+      "typeVersion": 1.4,
+      "position": [
+        540,
+        240
+      ],
+      "parameters": {
+        "sessionIdType": "customKey",
+        "sessionKey": "={{ $json.session_id }}",
+        "tableName": "n8n_chat_histories",
+        "contextWindowLength": 10
+      },
+      "credentials": {
+        "postgres": {
+          "id": "REPLACE_WITH_YOUR_CREDENTIAL",
+          "name": "Postgres (service role)"
+        }
+      }
+    },
+    {
+      "id": "a7",
+      "name": "Execute a SQL query in Postgres",
+      "type": "n8n-nodes-base.postgresTool",
+      "typeVersion": 2.6,
+      "position": [
+        700,
+        240
+      ],
+      "onError": "continueRegularOutput",
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "={{ $fromAI(\"query\", \"Write the PostgreSQL query based on the users request\") }}",
+        "options": {}
+      },
+      "credentials": {
+        "postgres": {
+          "id": "REPLACE_WITH_YOUR_CREDENTIAL",
+          "name": "Postgres (read-only bot role)"
+        }
+      }
+    },
+    {
+      "id": "a8",
+      "name": "Knowledge Base Search",
+      "type": "@n8n/n8n-nodes-langchain.vectorStorePGVector",
+      "typeVersion": 1.3,
+      "position": [
+        880,
+        240
+      ],
+      "parameters": {
+        "mode": "retrieve-as-tool",
+        "tableName": "documents",
+        "topK": 4,
+        "toolDescription": "Search Noorzaah's knowledge base for store policies and advice: delivery charges and times, payment (bKash), returns, refunds and exchanges, pre-orders, sizing, fabric types and care, and which collection to wear for which occasion. Do NOT use this for product prices or stock; use the Postgres database tool for those.",
+        "options": {
+          "columnNames": {
+            "values": {
+              "idColumnName": "id",
+              "vectorColumnName": "embedding",
+              "contentColumnName": "content",
+              "metadataColumnName": "metadata"
+            }
+          }
+        }
+      },
+      "credentials": {
+        "postgres": {
+          "id": "REPLACE_WITH_YOUR_CREDENTIAL",
+          "name": "Postgres (service role)"
+        }
+      }
+    },
+    {
+      "id": "a9",
+      "name": "Gemini Embeddings",
+      "type": "@n8n/n8n-nodes-langchain.embeddingsGoogleGemini",
+      "typeVersion": 1,
+      "position": [
+        900,
+        440
+      ],
+      "parameters": {
+        "modelName": "models/gemini-embedding-001"
+      },
+      "credentials": {
+        "googlePalmApi": {
+          "id": "REPLACE_WITH_YOUR_CREDENTIAL",
+          "name": "Google Gemini API"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Edit Fields",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit Fields": {
+      "main": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Agent": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Gemini Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Postgres Chat Memory": {
+      "ai_memory": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_memory",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Execute a SQL query in Postgres": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Knowledge Base Search": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Gemini Embeddings": {
+      "ai_embedding": [
+        [
+          {
+            "node": "Knowledge Base Search",
+            "type": "ai_embedding",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "timezone": "Asia/Dhaka"
+  },
+  "pinData": {},
+  "meta": {
+    "templateCredsSetupCompleted": false
+  }
+}

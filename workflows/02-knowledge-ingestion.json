@@ -1,0 +1,228 @@
+{
+  "name": "02 - Knowledge Ingestion (pgvector)",
+  "nodes": [
+    {
+      "name": "Ingest Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        0,
+        0
+      ],
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "noorzaah-ingest",
+        "responseMode": "lastNode",
+        "options": {}
+      },
+      "webhookId": "noorzaah-ingest",
+      "id": "i1"
+    },
+    {
+      "name": "Clear Old Knowledge",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        220,
+        0
+      ],
+      "alwaysOutputData": true,
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "delete from public.documents where metadata->>'source' = 'noorzaah-knowledge-base';",
+        "options": {}
+      },
+      "credentials": {
+        "postgres": {
+          "id": "REPLACE_WITH_YOUR_CREDENTIAL",
+          "name": "Postgres (service role)"
+        }
+      },
+      "id": "i2"
+    },
+    {
+      "name": "Knowledge Sections",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        440,
+        0
+      ],
+      "executeOnce": true,
+      "parameters": {
+        "jsCode": "const sections = [\n {\n  \"section\": \"Delivery and shipping\",\n  \"text\": \"Noorzaah — Delivery and shipping\\n- Delivery charge: Inside Dhaka ৳80. Outside Dhaka ৳150. The charge is shown at checkout before payment.\\n- Free delivery: when the bag has 2 or more dresses, delivery is free anywhere in Bangladesh.\\n- In-stock orders usually arrive in 1–3 days inside Dhaka and 2–5 days outside Dhaka.\\n- Pre-order items have no fixed delivery date. They are delivered once the stock arrives, and Noorzaah keeps the customer updated on WhatsApp.\\n- Order tracking: log in to My Account > Orders on noorzaah.com, or send the order number on WhatsApp.\\n- Noorzaah delivers within Bangladesh only.\"\n },\n {\n  \"section\": \"Payment\",\n  \"text\": \"Noorzaah — Payment\\n- bKash is the only accepted payment method.\\n- Cash on delivery (COD) is not available.\\n- Pre-order items require full payment upfront.\"\n },\n {\n  \"section\": \"Returns, refunds and exchanges\",\n  \"text\": \"Noorzaah — Returns, refunds and exchanges\\n- Customers must contact Noorzaah within 7 days of receiving the order, and items must be returned within 7 days of delivery.\\n- Returned products must be unused, unworn, unwashed and in original condition with all tags and packaging intact.\\n- Sale or discounted items and custom-made products are non-refundable and non-exchangeable.\\n- Refunds apply only when the wrong item was delivered, the product arrived damaged or defective, or an item was missing from the order.\\n- Return shipping costs are the customer's responsibility, unless the mistake is from Noorzaah's side.\\n- Approved refunds are processed within 7–10 business days, through the original payment method (for example bKash).\\n- Exchanges are subject to stock availability.\"\n },\n {\n  \"section\": \"Pre-orders and contact\",\n  \"text\": \"Noorzaah — Pre-orders and contact\\n- Noorzaah sells a mix of in-stock and pre-order dresses.\\n- For sizes, fabric details, real photos and pre-orders, customers can message Noorzaah on WhatsApp.\\n- Social pages: facebook.com/noorzaah.official and instagram.com/noorzaah.official.\\n- Pre-order delivery time: about 25 days after full payment. Noorzaah updates the customer on WhatsApp when the stock arrives.\"\n },\n {\n  \"section\": \"Sizing\",\n  \"text\": \"Noorzaah — Sizing\\n- Stitched dresses come in S, M, L and XL. Unstitched suits are free size and are tailored by the customer.\\n- If a customer is between two sizes, suggest the larger size, because Pakistani suits can be altered smaller more easily than larger.\\n- Sizes follow each brand's own official size chart (for example Maria B, Sana Safinaz, Zara Shahjahan), so the same size letter can fit slightly differently between brands.\\n- Never guess exact measurements. If a customer asks for exact chest or length measurements, ask them to message Noorzaah on WhatsApp, and the team will share that brand's size chart.\\n- For an exact fit, the customer can share their chest measurement on WhatsApp and the team will recommend a size.\"\n },\n {\n  \"section\": \"Fabric guide and care\",\n  \"text\": \"Noorzaah — Fabric guide and care\\n- Lawn: lightweight, breathable cotton; best for summer and daytime wear. Gentle machine wash or hand wash in cold water; dry in shade to protect the print.\\n- Chiffon: light, flowing and semi-sheer; elegant for parties and evening events. Dry clean recommended; never wring.\\n- Silk: smooth with a natural sheen; for formal and party wear. Dry clean only.\\n- Velvet: heavy, warm and rich; ideal for winter weddings and formal winter events. Dry clean only; store hanging, never folded tightly.\\n- Net (heavy net bridal): structured and decorative, often with heavy embroidery; for bridal and wedding wear. Dry clean only; store in a breathable garment bag.\\n- Embroidered pieces: iron on the reverse side on low heat, never directly on embroidery.\"\n },\n {\n  \"section\": \"What to wear for which occasion\",\n  \"text\": \"Noorzaah — What to wear for which occasion\\n- Hot weather, daytime, office or casual outings: Festive Lawn.\\n- Eid and daytime festive events: Festive Lawn or Embroidered Chiffon.\\n- Evening parties and dawats: Silk Party Wear or Embroidered Chiffon.\\n- Winter weddings and winter events: Velvet Winter Collection.\\n- Bride or close family at a wedding: Heavy Net Bridal.\\n- When a customer gives a budget, check exact prices with the products database before recommending.\"\n },\n {\n  \"section\": \"About Noorzaah\",\n  \"text\": \"Noorzaah — About Noorzaah\\n- Noorzaah is a Bangladesh-based premium fashion brand selling Pakistani-style branded women's dresses.\\n- Collections: Festive Lawn, Embroidered Chiffon, Silk Party Wear, Velvet Winter Collection, Heavy Net Bridal.\\n- Website: noorzaah.com.\"\n }\n];\n\nreturn sections.map(s => ({ json: s }));"
+      },
+      "id": "i3"
+    },
+    {
+      "name": "Insert into documents",
+      "type": "@n8n/n8n-nodes-langchain.vectorStorePGVector",
+      "typeVersion": 1.3,
+      "position": [
+        680,
+        0
+      ],
+      "parameters": {
+        "mode": "insert",
+        "tableName": "documents",
+        "options": {
+          "columnNames": {
+            "values": {
+              "idColumnName": "id",
+              "vectorColumnName": "embedding",
+              "contentColumnName": "content",
+              "metadataColumnName": "metadata"
+            }
+          }
+        }
+      },
+      "credentials": {
+        "postgres": {
+          "id": "REPLACE_WITH_YOUR_CREDENTIAL",
+          "name": "Postgres (service role)"
+        }
+      },
+      "id": "i4"
+    },
+    {
+      "name": "Gemini Embeddings",
+      "type": "@n8n/n8n-nodes-langchain.embeddingsGoogleGemini",
+      "typeVersion": 1,
+      "position": [
+        600,
+        220
+      ],
+      "parameters": {
+        "modelName": "models/gemini-embedding-001"
+      },
+      "credentials": {
+        "googlePalmApi": {
+          "id": "REPLACE_WITH_YOUR_CREDENTIAL",
+          "name": "Google Gemini API"
+        }
+      },
+      "id": "i5"
+    },
+    {
+      "name": "Default Data Loader",
+      "type": "@n8n/n8n-nodes-langchain.documentDefaultDataLoader",
+      "typeVersion": 1.1,
+      "position": [
+        780,
+        220
+      ],
+      "parameters": {
+        "dataType": "json",
+        "jsonMode": "expressionData",
+        "jsonData": "={{ $json.text }}",
+        "textSplittingMode": "custom",
+        "options": {
+          "metadata": {
+            "metadataValues": [
+              {
+                "name": "source",
+                "value": "noorzaah-knowledge-base"
+              },
+              {
+                "name": "section",
+                "value": "={{ $json.section }}"
+              }
+            ]
+          }
+        }
+      },
+      "id": "i6"
+    },
+    {
+      "name": "Text Splitter",
+      "type": "@n8n/n8n-nodes-langchain.textSplitterRecursiveCharacterTextSplitter",
+      "typeVersion": 1,
+      "position": [
+        860,
+        420
+      ],
+      "parameters": {
+        "chunkSize": 800,
+        "chunkOverlap": 100,
+        "options": {}
+      },
+      "id": "i7"
+    }
+  ],
+  "connections": {
+    "Ingest Webhook": {
+      "main": [
+        [
+          {
+            "node": "Clear Old Knowledge",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Clear Old Knowledge": {
+      "main": [
+        [
+          {
+            "node": "Knowledge Sections",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Knowledge Sections": {
+      "main": [
+        [
+          {
+            "node": "Insert into documents",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Gemini Embeddings": {
+      "ai_embedding": [
+        [
+          {
+            "node": "Insert into documents",
+            "type": "ai_embedding",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Default Data Loader": {
+      "ai_document": [
+        [
+          {
+            "node": "Insert into documents",
+            "type": "ai_document",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Text Splitter": {
+      "ai_textSplitter": [
+        [
+          {
+            "node": "Default Data Loader",
+            "type": "ai_textSplitter",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "timezone": "Asia/Dhaka"
+  },
+  "pinData": {},
+  "meta": {
+    "templateCredsSetupCompleted": false
+  }
+}
