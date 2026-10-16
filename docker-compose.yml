@@ -6,7 +6,7 @@ services:
     container_name: n8n
     restart: always
     ports:
-      - "5678:5678"
+      - "127.0.0.1:5678:5678"   # only this PC, not the Wi-Fi network
     environment:
       - N8N_SECURE_COOKIE=false
       - WEBHOOK_URL=https://${NGROK_DOMAIN}/
@@ -23,7 +23,7 @@ services:
     environment:
       - NGROK_AUTHTOKEN=${NGROK_AUTHTOKEN}
     ports:
-      - "4040:4040"
+      - "127.0.0.1:4040:4040"   # ngrok inspector shows request headers: keep it local
     depends_on:
       - n8n
 

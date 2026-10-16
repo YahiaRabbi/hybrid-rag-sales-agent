@@ -1,3 +1,5 @@
 .env
 *.local.json
 LOCAL-*
+
+CLAUDE.md
